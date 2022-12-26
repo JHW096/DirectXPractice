@@ -71,9 +71,13 @@ int WINAPI WinMain(
 	UpdateWindow(hwnd);
 
 	MSG msg;
+	//GetMessage(lpMsg : MSG 구조체 포인터, hwnd, wMsgFilterMin, Max : Min~Max 전체 메시지 확인)
+	//GetMessage는 true값, window 종료시 false
 	while (GetMessage(&msg, NULL, 0, 0))
 	{
+		//입력 값을 가상 키 값으로 처리
 		TranslateMessage(&msg);
+		//WindowProc에게 전달
 		DispatchMessage(&msg);
 	}
 	return static_cast<int>(msg.wParam);
@@ -83,13 +87,18 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 {
 	switch (message)
 	{
+		//윈도우 닫기 버튼 혹은 Alt + F4 종료의 경우
 		case WM_CLOSE: 
+			//해당 윈도우를 파괴, 윈도우 생성에 사용된 정보를 메모리에서 해제
 			DestroyWindow(hWnd);
 			break; 
+		//윈도우 파괴시 즉, DestroyWindow함수 작동시 메모리 해제와 같은 종료시 처리
 		case WM_DESTROY:
+			//PostQuitMessage(0) 은 GetMessage가 WM_QUIT메시지를 받아 False로 변환
 			PostQuitMessage(0);
 			break;
 		default:
+			//case로 지정한 메시지를 제외한 메시지를 기본 메시지 프로시저를 통해 처리
 			return DefWindowProc(hWnd, message, wParam, lParam);
 	}
 	return 0;
