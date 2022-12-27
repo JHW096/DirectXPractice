@@ -1,6 +1,9 @@
 #define WIN32_LEAN_AND_MEAN
 
 #include<Windows.h>
+#include<sstream>
+
+using namespace std;
 
 const wchar_t gClassName[]{ L"MyWindowClass" };
 const wchar_t gTitle[]{ L"Direct3D" };
@@ -97,6 +100,25 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 			//PostQuitMessage(0) 은 GetMessage가 WM_QUIT메시지를 받아 False로 변환
 			PostQuitMessage(0);
 			break;
+		//Mouse Left Button Down
+		case WM_LBUTTONDOWN:
+		{
+			//wm_button의 매개변수가 wchar기 때문에 wostringstream
+			wostringstream oss;
+			//lParam's tpye = double word(32bit) = HIWORD(16, y) + LOWORD(16, x)
+			oss << "X : " << LOWORD(lParam) << ", Y : " << HIWORD(lParam) << endl;
+			OutputDebugString(oss.str().c_str());
+			break;
+		}
+		//keyboard down
+		case WM_KEYDOWN: 
+		{
+			wostringstream oss;
+			//wParam = virtual key value
+			oss << "Virtual Key : " << wParam << endl;
+			OutputDebugString(oss.str().c_str());
+			break;
+		}
 		default:
 			//case로 지정한 메시지를 제외한 메시지를 기본 메시지 프로시저를 통해 처리
 			return DefWindowProc(hWnd, message, wParam, lParam);
