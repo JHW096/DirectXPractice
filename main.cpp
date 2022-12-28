@@ -22,6 +22,8 @@ Microsoft::WRL::ComPtr<ID3D11DeviceContext> gspDeviceContext{ };
 void InitD3D();
 void DestroyD3D();
 
+HWND gHwnd{ };
+HINSTANCE gInstance{ };
 
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
@@ -32,7 +34,6 @@ int WINAPI WinMain(
 	_In_ int nShowCmd
 )
 {
-	HWND hwnd;
 	WNDCLASSEX wc;
 
 	//1. WindowClass 등록
@@ -60,7 +61,7 @@ int WINAPI WinMain(
 		return 0;
 	}
 
-	hwnd = CreateWindowEx(
+	gHwnd = CreateWindowEx(
 		NULL,					//Tpye : DWORD, name : dwExStyle //Description : 추가 Style 
 		gClassName,				//Description : 윈도우 클래스 이름 지정, RegisterClassEX지정한 이름만 가능
 		L"Hello window",		//Title Bar name
@@ -74,20 +75,21 @@ int WINAPI WinMain(
 		hInstance,
 		NULL);					//Type : LPVOID / name : lpParam / dsc : 윈도우 생성시 추가 정보
 
-	if (hwnd == nullptr)
+	if (gHwnd == nullptr)
 	{
 		MessageBox(nullptr, L"Failed to create window class", L"Error", MB_ICONEXCLAMATION | MB_OK);
 		return 0;
 	}
 
 	//hwnd를 호출, nShowCmd = 화면 option(SW_SHOWNORMAL, SW_MINMIZE, SW_MAXIMAZE) 
-	ShowWindow(hwnd, nShowCmd);
+	ShowWindow(gHwnd, nShowCmd);
+	//window에서 동시에 여러 앱이 실행되고 있을 확률이 높으며, 활성화 없이 DirectX가 작동 안할 가능성있음
 	//Foreground 창 변경 작업(Alt + Tap 또는 Alt + 윈도우 창 변경) 해당 윈도우 호출 가능
-	SetForegroundWindow(hwnd); 
+	SetForegroundWindow(gHwnd); 
 	//키보드 입력을 받을 창
-	SetFocus(hwnd);
+	SetFocus(gHwnd);
 	//ReDrawing(update) Window(hWnd)
-	UpdateWindow(hwnd);
+	UpdateWindow(gHwnd);
 
 	MSG msg;
 	//GetMessage(lpMsg : MSG 구조체 포인터, hwnd, wMsgFilterMin, Max : Min~Max 전체 메시지 확인)
@@ -140,4 +142,17 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 			return DefWindowProc(hWnd, message, wParam, lParam);
 	}
 	return 0;
+}
+
+void InitD3D()
+{
+	DXGI_SWAP_CHAIN_DESC scd{ }; 
+
+	ZeroMemory(&scd, sizeof(DXGI_SWAP_CHAIN_DESC));
+
+	scd.BufferCount = 1;
+	scd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	scd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	
+
 }
