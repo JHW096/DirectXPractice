@@ -5,7 +5,7 @@
 #include<d3d11.h>
 #include<sstream>
 
-#pragma commnet(lib, "d3d11.lib");
+#pragma comment(lib, "d3d11.lib")
 
 using namespace std;
 
@@ -21,8 +21,15 @@ Microsoft::WRL::ComPtr<ID3D11Device> gspDevice{ };
 //info - GPU and memory control // Rendering 방식
 Microsoft::WRL::ComPtr<ID3D11DeviceContext> gspDeviceContext{ };
 
+Microsoft::WRL::ComPtr<ID3D11Texture2D> gspRenderTarget{ };
+Microsoft::WRL::ComPtr<ID3D11Texture2D> gspDepthStencil{ };
+Microsoft::WRL::ComPtr<ID3D11RenderTargetView> gspRenderTargetView{ };
+Microsoft::WRL::ComPtr<ID3D11DepthStencilView> gspDepthStencilView{ };
+
+
 void InitD3D();
 void DestroyD3D();
+void RenderFrame();
 
 HWND gHwnd{ };
 HINSTANCE gInstance{ };
@@ -99,18 +106,33 @@ int WINAPI WinMain(
 	//ReDrawing(update) Window(hWnd)
 	UpdateWindow(gHwnd);
 
+	InitD3D();
+
 	MSG msg;
 	//GetMessage(lpMsg : MSG 구조체 포인터, hwnd, wMsgFilterMin, Max : Min~Max 전체 메시지 확인)
 	//GetMessage는 true값, window 종료시 false
 	//PeekMessage는 매 프레임마다 함수가 실행되고 메시지가 있든 없든 항상 1을 반환. 
 	//반면 Getmeesgae는 queue에 Message가 없으면 항상 대기
-	while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+
+	while (true)
 	{
-		//입력 값을 가상 키 값으로 처리
-		TranslateMessage(&msg);
-		//WindowProc에게 전달
-		DispatchMessage(&msg);
+		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		{
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+
+			if (msg.message == WM_QUIT)
+			{
+				break;
+			}
+		}
+		else
+		{
+			//loop
+		}
 	}
+	DestroyD3D();
+
 	return static_cast<int>(msg.wParam);
 }
 
@@ -190,10 +212,64 @@ void InitD3D()
 		NULL,	//기능 수준 배열 반환
 		gspDeviceContext.ReleaseAndGetAddressOf()	//디바이스 컨텍스트 포인터 해제후 반환
 	);
+
+	gspSwapChain->GetBuffer(
+		0,
+		IID_PPV_ARGS(gspRenderTarget.ReleaseAndGetAddressOf())
+	);
+
+	gspDevice->CreateRenderTargetView(
+		gspRenderTarget.Get(),
+		nullptr,
+		gspRenderTargetView.GetAddressOf()
+	);
+
+	CD3D11_TEXTURE2D_DESC dsd(
+		DXGI_FORMAT_D24_UNORM_S8_UINT,
+		WINDOW_WIDTH,
+		WINDOW_HEIGHT,
+		1,
+		1,
+		D3D11_BIND_DEPTH_STENCIL
+	);
+
+	gspDevice->CreateTexture2D(
+		&dsd,
+		nullptr,
+		gspDepthStencil.ReleaseAndGetAddressOf()
+	);
+
+	CD3D11_DEPTH_STENCIL_VIEW_DESC dsvd(D3D11_DSV_DIMENSION_TEXTURE2D);
+	gspDevice->CreateDepthStencilView(
+		gspDepthStencil.Get(),
+		&dsvd,
+		gspDepthStencilView.ReleaseAndGetAddressOf()
+	);
+
+	gspDeviceContext->OMSetRenderTargets(
+		1,
+		gspRenderTargetView.GetAddressOf(),
+		gspDepthStencilView.Get()
+	);
+
+	CD3D11_VIEWPORT viewport(
+		0.0f,
+		0.0f,
+		static_cast<float>(WINDOW_WIDTH),
+		static_cast<float>(WINDOW_HEIGHT)
+	);
+
+	gspDeviceContext->RSSetViewports(1, &viewport);
+
+
 }
 
 void DestroyD3D()
 {	//Microsoft::Comptr delete
+	gspDepthStencil.Reset();
+	gspDepthStencilView.Reset();
+	gspRenderTarget.Reset();
+	gspRenderTargetView.Reset();
 	gspSwapChain.Reset();
 	gspDevice.Reset();
 	gspDeviceContext.Reset();
@@ -201,4 +277,18 @@ void DestroyD3D()
 	DestroyWindow(gHwnd);
 	//윈도우 클래스 해제
 	UnregisterClass(gClassName, gInstance);
+}
+
+void RenderFrame()
+{
+	float clear_color[4]{ 0.f, 0.2f, 0.4f, 1.0f };
+
+	gspDeviceContext->ClearRenderTargetView(gspRenderTargetView.Get(), clear_color);
+	gspDeviceContext->ClearDepthStencilView(
+		gspDepthStencilView.Get(),
+		D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,
+		1.0f,
+		0
+	);
+	gspSwapChain->Present(0, 0);
 }
