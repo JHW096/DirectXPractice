@@ -14,9 +14,11 @@ const wchar_t gTitle[]{ L"Direct3D" };
 const int WINDOW_WIDTH{ 800 };
 const int WINDOW_HEIGHT{ 600 };
 
-
+//Swap chain = front, back buffers
 Microsoft::WRL::ComPtr<IDXGISwapChain> gspSwapChain{ };
+//Device = Display adaptor, Graphic card // fn = control device and administrate
 Microsoft::WRL::ComPtr<ID3D11Device> gspDevice{ };
+//info - GPU and memory control // Rendering 방식
 Microsoft::WRL::ComPtr<ID3D11DeviceContext> gspDeviceContext{ };
 
 void InitD3D();
@@ -38,6 +40,9 @@ int WINAPI WinMain(
 
 	//1. WindowClass 등록
 	ZeroMemory(&wc, sizeof(WNDCLASSEX));
+
+	gInstance = hInstance;
+
 	//Class Style_ HorizontalRedraw, VerticalRedraw; 
 	//클라이언트를 수평 및 수직으로 움직이거나 사이즈를 바꿀 때 다시 그린다.
 	wc.style = CS_HREDRAW | CS_VREDRAW;
@@ -61,15 +66,18 @@ int WINAPI WinMain(
 		return 0;
 	}
 
+	RECT wr{ 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT };
+	AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
+
 	gHwnd = CreateWindowEx(
 		NULL,					//Tpye : DWORD, name : dwExStyle //Description : 추가 Style 
 		gClassName,				//Description : 윈도우 클래스 이름 지정, RegisterClassEX지정한 이름만 가능
-		L"Hello window",		//Title Bar name
+		L"DirectX practcie",	//Title Bar name
 		WS_OVERLAPPEDWINDOW,	//Type : DWORD / name : dwStyle / Description : 윈도우 스타일(기본형)
 		CW_USEDEFAULT,			//Type : int / Description : x위치, 디폴트 값, OS가 자동지정
 		CW_USEDEFAULT,			//Type : int / Description : y위치
-		WINDOW_WIDTH,			//Type : int / Window Width Size
-		WINDOW_HEIGHT,			//Type : int / Window Height Size
+		wr.right = wr.left,			//Type : int / Window Width Size
+		wr.bottom - wr.top,			//Type : int / Window Height Size
 		NULL,					//Type : HWND / Description : 부모 윈도우를 지정, 종속관계의 윈도우
 		NULL,					//Type : HMENU / Description : 메뉴바 핸들
 		hInstance,
@@ -94,7 +102,9 @@ int WINAPI WinMain(
 	MSG msg;
 	//GetMessage(lpMsg : MSG 구조체 포인터, hwnd, wMsgFilterMin, Max : Min~Max 전체 메시지 확인)
 	//GetMessage는 true값, window 종료시 false
-	while (GetMessage(&msg, NULL, 0, 0))
+	//PeekMessage는 매 프레임마다 함수가 실행되고 메시지가 있든 없든 항상 1을 반환. 
+	//반면 Getmeesgae는 queue에 Message가 없으면 항상 대기
+	while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
 	{
 		//입력 값을 가상 키 값으로 처리
 		TranslateMessage(&msg);
@@ -146,13 +156,49 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPara
 
 void InitD3D()
 {
-	DXGI_SWAP_CHAIN_DESC scd{ }; 
+	//swap chain초기화를 어떤 방법으로 초기화 할 것인가?
+	//DirectX Graphics Infrastructure_Swap_chain_Desciption
+	DXGI_SWAP_CHAIN_DESC scd{ };
 
 	ZeroMemory(&scd, sizeof(DXGI_SWAP_CHAIN_DESC));
 
+	//Back buffer Count (Front - 1 / Count - Back) = 2
 	scd.BufferCount = 1;
+	//Display mode / 일단은 생상표현만
 	scd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	//후면 버퍼 접근 방식지정
+	//DXGI_USAGE_RENDER_TARGET_OUTPUT = 후면 버퍼에 직접 그림을 그림.
 	scd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	
+	//그래픽이 그려질 화면 = gHwnd;
+	scd.OutputWindow = gHwnd;
+	scd.SampleDesc.Count = 1;
+	//Window mode = true;
+	scd.Windowed = TRUE;
 
+	//말 그대로 그래픽 카드와 스왑체인을 생성해주는 함수
+	D3D11CreateDeviceAndSwapChain(
+		NULL,						//IDXGIAdapter* 그래픽카드 지정하는 포인터, NULL = 기본
+		D3D_DRIVER_TYPE_HARDWARE,	//하드웨어 or 소프트웨어 옵션 설정, 주로 하드웨어 지정
+		NULL,						//dynamic-link library (잘 모름)
+		NULL,						//DirectX3D 실행에 대한 플래그 지정(잘 모름)
+		NULL,						//기능 수준 지정 version up ex) 11.1 이 아니라면 null
+		NULL,						//위에도 null이면 여기도 null
+		D3D11_SDK_VERSION,			//SDK-version
+		&scd,						//swapchain구조체 넣으면 됨
+		gspSwapChain.ReleaseAndGetAddressOf(),		//Swap Chain, 해제 후 주소 반환
+		gspDevice.ReleaseAndGetAddressOf(),			//디바이스 포인터
+		NULL,	//기능 수준 배열 반환
+		gspDeviceContext.ReleaseAndGetAddressOf()	//디바이스 컨텍스트 포인터 해제후 반환
+	);
+}
+
+void DestroyD3D()
+{	//Microsoft::Comptr delete
+	gspSwapChain.Reset();
+	gspDevice.Reset();
+	gspDeviceContext.Reset();
+	//비정상 종료를 예상한 한 번 더 해제
+	DestroyWindow(gHwnd);
+	//윈도우 클래스 해제
+	UnregisterClass(gClassName, gInstance);
 }
