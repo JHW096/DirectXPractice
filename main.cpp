@@ -1,7 +1,11 @@
 #define WIN32_LEAN_AND_MEAN
 
 #include<Windows.h>
+#include<wrl/client.h>
+#include<d3d11.h>
 #include<sstream>
+
+#pragma commnet(lib, "d3d11.lib");
 
 using namespace std;
 
@@ -9,6 +13,14 @@ const wchar_t gClassName[]{ L"MyWindowClass" };
 const wchar_t gTitle[]{ L"Direct3D" };
 const int WINDOW_WIDTH{ 800 };
 const int WINDOW_HEIGHT{ 600 };
+
+
+Microsoft::WRL::ComPtr<IDXGISwapChain> gspSwapChain{ };
+Microsoft::WRL::ComPtr<ID3D11Device> gspDevice{ };
+Microsoft::WRL::ComPtr<ID3D11DeviceContext> gspDeviceContext{ };
+
+void InitD3D();
+void DestroyD3D();
 
 
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -70,6 +82,10 @@ int WINAPI WinMain(
 
 	//hwnd를 호출, nShowCmd = 화면 option(SW_SHOWNORMAL, SW_MINMIZE, SW_MAXIMAZE) 
 	ShowWindow(hwnd, nShowCmd);
+	//Foreground 창 변경 작업(Alt + Tap 또는 Alt + 윈도우 창 변경) 해당 윈도우 호출 가능
+	SetForegroundWindow(hwnd); 
+	//키보드 입력을 받을 창
+	SetFocus(hwnd);
 	//ReDrawing(update) Window(hWnd)
 	UpdateWindow(hwnd);
 
